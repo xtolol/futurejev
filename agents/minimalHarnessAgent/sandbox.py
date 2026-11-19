@@ -187,6 +187,17 @@ class SandboxHelpers:
             "--ro-bind-try", "/bin", "/bin",
             "--ro-bind-try", "/sbin", "/sbin",
         ]
+        # WSL2 DNS compatibility:
+        # /etc/resolv.conf may link to /mnt/wsl/resolv.conf,
+        # which is otherwise hidden by the Bubblewrap sandbox.
+        if os.path.isfile("/mnt/wsl/resolv.conf"):
+            args.extend([
+                "--dir", "/mnt",
+                "--dir", "/mnt/wsl",
+                "--ro-bind",
+                "/mnt/wsl/resolv.conf",
+                "/mnt/wsl/resolv.conf",
+            ])
         if self.config.sandbox_proc_mode == "new":
             args.extend(["--unshare-pid", "--proc", "/proc"])
         else:
