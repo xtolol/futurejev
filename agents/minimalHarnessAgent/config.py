@@ -140,6 +140,8 @@ class MinimalHarnessConfig:
     # my_prediction filled. <prev_date> = first sim day - 1. Used by the
     # active_memory mode to seed Day 1 from a prior agent's warmup output.
     bootstrap_dir: str = ""
+    enable_jev_tool: bool = False
+    jev_model: str = "jev-latest"
 
 
 # Default allowlist covers the LLM provider endpoints used (or likely to be

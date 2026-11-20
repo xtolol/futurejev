@@ -146,9 +146,9 @@ class SandboxHelpers:
         """Wrap `inner_cmd` in bwrap, exposing only the harness needs.
 
         Exposed: workspace rw (cwd, articles/, memory/, market.csv, model
-        outputs); _internal_dir rw (MCP signals, state.json,
-        system_prompt.md); mcp_relay_dir rw (per-agent host MCP/retrieval
-        socket); harness install ro plus backend state dirs rw (codex
+        outputs); _internal_dir and mcp_relay_dir ro in Jev runs, rw otherwise
+        (driver state, signals, and the relay socket); harness install ro plus
+        backend state dirs rw (codex
         CODEX_HOME when set, else ~/.codex; Claude ~/.claude, ~/.claude.json, ~/.cache/claude*; opencode
         ~/.cache|.local|.config/opencode plus XDG_DATA_HOME SQLite scratch);
         OS dirs ro (/usr, /etc, /lib*, /bin, /sbin); stripped /dev; tmpfs /tmp;
@@ -213,9 +213,11 @@ class SandboxHelpers:
                 target = target.rstrip("/") or "/"
                 args.extend(["--symlink", target, alias])
 
-        # Bind workspace and internal dir rw at realpaths to avoid alias clashes.
+        # Mount the parent first so the workspace can remain writable inside it.
+        # In Jev runs the host owns the question state, signals, and API call log.
+        host_bind = "--ro-bind" if self.config.enable_jev_tool else "--bind"
+        args.extend([host_bind, internal_real, internal_real])
         args.extend(["--bind", workspace_real, workspace_real])
-        args.extend(["--bind", internal_real, internal_real])
 
         # Articles are hardlinked from articles_base; ro-bind prevents sandbox
         # writes from corrupting sources while host-side driver writes bypass bwrap.
@@ -251,7 +253,7 @@ class SandboxHelpers:
         if self._mcp_relay_dir:
             md = real_path(self._mcp_relay_dir)
             if os.path.exists(md):
-                args.extend(["--bind", md, md])
+                args.extend([host_bind, md, md])
 
         # chdir to the workspace realpath, matching the bind.
         args.extend(["--chdir", workspace_real])

@@ -459,6 +459,8 @@ def create_agents_from_config(config: dict, args, output_dir: str, search_tool=N
                 reasoning_effort=agent_def.get('reasoning_effort', defaults.get('reasoning_effort', 'high')),
                 codex_resume=bool(agent_def.get('codex_resume', defaults.get('codex_resume', False))),
                 prompt_mode=prompt_mode,
+                enable_jev_tool=_as_bool(agent_def.get('enable_jev_tool', defaults.get('enable_jev_tool', False))),
+                jev_model=agent_def.get('jev_model', defaults.get('jev_model', 'jev-latest')),
                 # Active memory hardcodes the maximal-handholding shared sections
                 # (TW nudge + imminent reminder), so the recorded version is
                 # forced to v3 regardless of any YAML setting.

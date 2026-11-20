@@ -96,6 +96,10 @@ class MinimalHarnessAgent(StateHelpers, McpHelpers, SandboxHelpers, BaseAgent):
         self._mcp_relay_sock: Optional[Path] = None
         self._mcp_bridge_wrapper: Optional[Path] = None
 
+        if config.enable_jev_tool and (
+            config.harness_backend != "codex" or config.prompt_mode != "default" or not config.sandbox
+        ):
+            raise ValueError("enable_jev_tool requires sandboxed Codex with prompt_mode='default'.")
         if self.config.network_isolation and not self.config.sandbox:
             raise ValueError("network_isolation=True requires sandbox=True.")
         if self.config.sandbox_proc_mode not in {"new", "host_ro"}:
@@ -262,6 +266,8 @@ class MinimalHarnessAgent(StateHelpers, McpHelpers, SandboxHelpers, BaseAgent):
         env: Dict[str, str],
         label: str,
     ) -> None:
+        # The separately launched host MCP relay retains the TypeSafe credential.
+        env.pop("TYPESAFE_API_KEY", None)
         self._close_harness_logs()
         log_stdout = open(self._internal_dir / stdout_log_name, "a")
         log_stderr = open(self._internal_dir / stderr_log_name, "a")

@@ -73,6 +73,8 @@ class McpHelpers:
             "--handholding-version", self.config.handholding_version,
             "--agent-id", self.agent_id,
         ]
+        if self.config.enable_jev_tool:
+            args.extend(["--enable-jev-tool", "--jev-model", self.config.jev_model])
         args.extend(self._mcp_tool_filter_args())
         if embed_server_url:
             args.extend(["--embedding-server-url", embed_server_url])
@@ -156,8 +158,12 @@ class McpHelpers:
         log_path = self._internal_dir / "mcp_relay.log"
         log_f = open(log_path, "a")
         logger.info("Starting MCP relay: %s", " ".join(cmd))
+        relay_env = os.environ.copy()
+        if not self.config.enable_jev_tool:
+            relay_env.pop("TYPESAFE_API_KEY", None)
         self._mcp_relay_proc = subprocess.Popen(
             cmd,
+            env=relay_env,
             stdin=subprocess.DEVNULL,
             stdout=log_f,
             stderr=log_f,

@@ -12,6 +12,7 @@ up before tools are available.
 
 import argparse
 import contextlib
+import hashlib
 import json
 import os
 import sys
@@ -706,6 +707,55 @@ def _register_memory_tools() -> None:
 
 # ── main ───────────────────────────────────────────────────────────────
 
+def _register_jev_tool(model: str) -> None:
+    """Expose the passage analyzer for this host session using the configured Jev model."""
+    import atexit
+    import fcntl
+
+    from futuresim_agents.minimalHarnessAgent.evidence_analysis import (
+        MAX_SOURCE_ID_CHARS, EvidenceAnalysisError, TypeSafeEvidenceClient,
+    )
+
+    client = TypeSafeEvidenceClient(model)
+    atexit.register(client.close)
+
+    @mcp.tool()
+    def analyze_evidence(question_id: str, evidence_text: str, source_id: str = "") -> str:
+        """Analyze a passage against an active question. Returns advisory relevance, direction,
+        and explicit outcome confirmation. Use source_id as an optional provenance label.
+        """
+        started = time.monotonic()
+        qid = question_id.strip()
+        question = next((q for q in _state["questions"] if str(q["qid"]) == qid), None)
+        result = {"question_id": qid, "model": model}
+        if len(source_id) <= MAX_SOURCE_ID_CHARS:
+            result["source_id"] = source_id
+        try:
+            if question is None:
+                raise EvidenceAnalysisError("Question ID is not active on this simulation date.")
+            analysis = client.analyze(question, evidence_text, _state["current_date"], source_id)
+            result.update(analysis, status="success")
+        except EvidenceAnalysisError as exc:
+            result.update(status="error", error=str(exc))
+
+        record = {
+            **result,
+            "simulation_date": _state["current_date"],
+            "question_types": ["score", "choice", "noul"],
+            "evidence_sha256": hashlib.sha256(evidence_text.encode("utf-8", errors="replace")).hexdigest(),
+            "latency_ms": round((time.monotonic() - started) * 1000),
+        }
+        try:
+            with (_internal_dir / "jev_calls.jsonl").open("a", encoding="utf-8") as log:
+                # The relay can fork multiple writers for this agent.
+                fcntl.flock(log, fcntl.LOCK_EX)
+                log.write(json.dumps(record) + "\n")
+                log.flush()
+        except OSError:
+            print("Could not append the Jev evidence log.", file=sys.stderr)
+        return json.dumps(result)
+
+
 def main():
     global _workspace, _internal_dir, _search_cutoff_days, _cli_args, _handholding_version
     global _memory_tools_enabled, _agent_id
@@ -729,6 +779,8 @@ def main():
         default="v1",
         help="How much guidance next_day appends: v1 (minimal), v2 (adds still-active nudge), v3 (v2 + imminent reminder).",
     )
+    parser.add_argument("--enable-jev-tool", action="store_true", help="Register the Jev evidence tool.")
+    parser.add_argument("--jev-model", default="jev-latest", help="TypeSafe model for evidence analysis.")
     parser.add_argument("--enabled-tools", default="",
                         help="Comma-separated MCP tools to expose. Empty exposes all tools.")
     parser.add_argument("--agent-id", default="agent",
@@ -772,6 +824,8 @@ def main():
     # initial tool-list handshake.
     if _memory_tools_enabled:
         _register_memory_tools()
+    if args.enable_jev_tool:
+        _register_jev_tool(args.jev_model)
 
     enabled_tools = {name.strip() for name in args.enabled_tools.split(",") if name.strip()}
     if enabled_tools:
