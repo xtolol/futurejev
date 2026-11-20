@@ -491,6 +491,7 @@ class MinimalHarnessAgent(StateHelpers, McpHelpers, SandboxHelpers, BaseAgent):
         )
         if self.config.prompt_mode != "no_memory":
             prompt_kwargs["prompt_mode"] = self.config.prompt_mode
+            prompt_kwargs["enable_jev_tool"] = self.config.enable_jev_tool
         prompt = _build_system_prompt(**prompt_kwargs)
         prompt_path = self._internal_dir / "system_prompt.md"
         with open(prompt_path, "w") as f:

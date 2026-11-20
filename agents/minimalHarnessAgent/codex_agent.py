@@ -25,6 +25,10 @@ logger = logging.getLogger(__name__)
 
 _CODEX_MCP_NAME_REPLACEMENTS = (
     (
+        "`mcp__forecast__analyze_evidence(question_id, evidence_text, source_id?)`",
+        "`analyze_evidence(question_id, evidence_text, source_id?)` on the Forecast MCP server",
+    ),
+    (
         "`mcp__forecast__search_news(query, from_date?, to_date?)`",
         "`search_news(query, from_date?, to_date?)` on the Forecast MCP server",
     ),

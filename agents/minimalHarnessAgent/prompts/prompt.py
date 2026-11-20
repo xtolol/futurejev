@@ -268,6 +268,7 @@ def build_system_prompt(
     article_files_available: bool = True,
     predictions_files_available: bool = True,
     tool_prefix: str = "mcp__forecast__",
+    enable_jev_tool: bool = False,
 ) -> str:
     if handholding_version not in HANDHOLDING_VERSIONS:
         raise ValueError(
@@ -331,6 +332,17 @@ def build_system_prompt(
         f"- `mcp__forecast__search_news(query, from_date?, to_date?)`: search the news corpus for evidence. "
         f"`to_date` is capped at {cutoff_desc}. {search_results_desc}\n"
     )
+    jev_tool_line = ""
+    if enable_jev_tool:
+        jev_tool_line = (
+            "- `mcp__forecast__analyze_evidence(question_id, evidence_text, source_id?)` asks Jev "
+            "to interpret a passage for an active question. You may consult it when evidence is "
+            "ambiguous or consequential. Skip clearly irrelevant passages and those you can already "
+            "interpret confidently.\n"
+            "  Jev scores relevance, classifies direction, and assesses whether the passage explicitly "
+            "reports the event. Its probabilities describe those judgments about the text. Weigh them "
+            "alongside your other evidence and decide the final forecast probabilities yourself.\n"
+        )
     max_search_section = ""
     if prompt_mode == "max_search" and _iso(current_date) == _iso(start_date):
         max_search_section = """\
@@ -400,7 +412,7 @@ Column descriptions of the DataFrame (market.csv):
 {max_search_section}
 
 ## TOOLS AVAILABLE FOR YOUR USE
-{search_tool_line}\
+{search_tool_line}{jev_tool_line}\
 - `mcp__forecast__submit_forecasts(question_id, outcomes)`: submit exactly one forecast for exactly one question ID (`qid`). Your forecasts are tracked by the harness — there is no file to inspect.
 - `mcp__forecast__next_day()`: end the current session and proceed to the next one.
 

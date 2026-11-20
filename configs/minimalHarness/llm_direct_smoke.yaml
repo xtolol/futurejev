@@ -1,0 +1,35 @@
+# Project Atlas synthetic smoke run.
+sim_name: "llm_direct_smoke"
+
+start_date: "2025-12-31"
+end_date: "2025-12-31"
+lookback_days: 1
+timegap_days: 1
+resolution_start: "2025-12-31"
+resolution_end: "2025-12-31"
+
+dataset: "custom"
+dataset_path: "${FSIM_REPO_DIR}/../experiments/smoke/questions.jsonl"
+split: "test"
+matching: "exact"
+search_backend: ""
+search_db: ""
+articles_base: ""
+
+defaults:
+  provider: "none"
+  scaffold: "minimalHarness"
+  harness_backend: "codex"
+  codex_path: "/usr/local/bin/codex"
+  reasoning_effort: "low"
+  prompt_mode: "default"
+  codex_resume: false
+  sandbox: true
+  sandbox_proc_mode: "host_ro"
+  network_isolation: true
+  enable_jev_tool: false
+  jev_model: "jev-latest"
+
+agents:
+  - model: "gpt-5.6-sol"
+    timeout_seconds: 600
